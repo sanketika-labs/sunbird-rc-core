@@ -97,11 +97,12 @@ public class XValidationService {
 
     private boolean validateRegistryExistence(String ruleExpression, JSONObject data) throws Exception {
         String[] parts = ruleExpression.split("'");
+        String entityType;
         if (parts.length < 3) {
             throw new IllegalArgumentException("Invalid registry existence rule format");
         }
 
-        String entityType = parts[1];
+         entityType = parts[1];
 
 
         if (ruleExpression.contains("{")) {
@@ -128,8 +129,17 @@ public class XValidationService {
             return registryLookup.exists(searchQuery);
         } else {
             // Single field case
-            String field = parts[3];
-            String valueField = parts[4].substring(1, parts[4].length() - 1).trim();
+            String regex = "existsInRegistry\\('([^']+)',\\s*'([^']+)',\\s*([^\\)]+)\\)";
+            java.util.regex.Matcher matcher = java.util.regex.Pattern.compile(regex).matcher(ruleExpression);
+
+            if (!matcher.find()) {
+                throw new IllegalArgumentException("Invalid single field format");
+            }
+
+            entityType = matcher.group(1);
+            String field = matcher.group(2);
+            String valueField = matcher.group(3).trim();
+
 
             if (!data.has(valueField)) {
                 throw new IllegalArgumentException("Field not found: " + valueField);
