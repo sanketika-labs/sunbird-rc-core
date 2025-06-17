@@ -34,6 +34,8 @@ import dev.sunbirdrc.registry.util.ServiceProvider;
 import dev.sunbirdrc.validators.IValidate;
 import dev.sunbirdrc.validators.ValidationFilter;
 import dev.sunbirdrc.validators.json.jsonschema.JsonValidationServiceImpl;
+import dev.sunbirdrc.validators.json.jsonschema.XValidationService;
+import dev.sunbirdrc.registry.service.impl.RegistryLookupImpl;
 import lombok.Getter;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.commons.validator.routines.UrlValidator;
@@ -63,6 +65,7 @@ import org.springframework.web.servlet.resource.PathResourceResolver;
 import org.sunbird.akka.core.SunbirdActorFactory;
 import dev.sunbirdrc.registry.identity_providers.pojos.IdentityManager;
 import dev.sunbirdrc.registry.identity_providers.providers.IdentityProvider;
+import dev.sunbirdrc.pojos.RegistryLookup;
 
 import java.io.IOException;
 import java.util.*;
@@ -383,7 +386,7 @@ public class GenericConfiguration implements WebMvcConfigurer {
 				registry.addInterceptor(validationInterceptor()).addPathPatterns("/add").order(orderIdx++);
 			} catch (IOException | CustomException e) {
 				logger.error("Exception occurred while adding validation interceptor: {}", ExceptionUtils.getStackTrace(e));
-                throw new RuntimeException(e);
+				throw new RuntimeException(e);
 			}
 		}
 	}
@@ -492,5 +495,15 @@ public class GenericConfiguration implements WebMvcConfigurer {
 			}
 		}
 		throw new RuntimeException("Identity provider " + identityProviderConfiguration.getProvider() + " not found");
+	}
+
+	@Bean
+	public RegistryLookup registryLookup(RegistryService registryService) {
+		return new RegistryLookupImpl(registryService);
+	}
+
+	@Bean
+	public XValidationService xValidationService(RegistryLookup registryLookup) {
+		return new XValidationService(registryLookup);
 	}
 }

@@ -25,7 +25,7 @@
         <janusgraph.version>0.3.1</janusgraph.version>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
-        <jacoco.version>0.8.1</jacoco.version>
+        <jacoco.version>0.8.11</jacoco.version>
         <!-- this version is in sync with elastic-search.jar which here added as dependency-->
         <elasticsearch.version>6.6.0</elasticsearch.version>
         <revision>2.0.3</revision>
@@ -217,15 +217,15 @@
             </exclusions>
         </dependency>
         <!--<dependency>-->
-            <!--<groupId>com.orientechnologies</groupId>-->
-            <!--<artifactId>orientdb-jdbc</artifactId>-->
-            <!--<version>3.0.0m2</version>-->
-            <!--<exclusions>-->
-                <!--<exclusion>-->
-                    <!--<groupId>com.google.guava</groupId>-->
-                    <!--<artifactId>guava</artifactId>-->
-                <!--</exclusion>-->
-            <!--</exclusions>-->
+        <!--<groupId>com.orientechnologies</groupId>-->
+        <!--<artifactId>orientdb-jdbc</artifactId>-->
+        <!--<version>3.0.0m2</version>-->
+        <!--<exclusions>-->
+        <!--<exclusion>-->
+        <!--<groupId>com.google.guava</groupId>-->
+        <!--<artifactId>guava</artifactId>-->
+        <!--</exclusion>-->
+        <!--</exclusions>-->
         <!--</dependency>-->
         <!-- End - Include this dependency for Orient DB support -->
 
@@ -249,15 +249,15 @@
         </dependency>
 
         <!--<dependency>-->
-            <!--<groupId>org.apache.tinkerpop</groupId>-->
-            <!--<artifactId>gremlin-driver</artifactId>-->
-            <!--<version>${tinkerpop.version}</version>-->
-            <!--<exclusions>-->
-                <!--<exclusion>-->
-                    <!--<groupId>org.slf4j</groupId>-->
-                    <!--<artifactId>slf4j-log4j12</artifactId>-->
-                <!--</exclusion>-->
-            <!--</exclusions>-->
+        <!--<groupId>org.apache.tinkerpop</groupId>-->
+        <!--<artifactId>gremlin-driver</artifactId>-->
+        <!--<version>${tinkerpop.version}</version>-->
+        <!--<exclusions>-->
+        <!--<exclusion>-->
+        <!--<groupId>org.slf4j</groupId>-->
+        <!--<artifactId>slf4j-log4j12</artifactId>-->
+        <!--</exclusion>-->
+        <!--</exclusions>-->
         <!--</dependency>-->
 
         <!-- Refer to https://docs.janusgraph.org/0.3.0/config-ref.html#_storage_cassandra for list
@@ -265,9 +265,9 @@
         <!--Include this dependency if you need cql as storage.backend option-->
         <!-- https://mvnrepository.com/artifact/org.janusgraph/janusgraph-cql -->
         <!--<dependency>-->
-            <!--<groupId>org.janusgraph</groupId>-->
-            <!--<artifactId>janusgraph-cql</artifactId>-->
-            <!--<version>${janusgraph.version}</version>-->
+        <!--<groupId>org.janusgraph</groupId>-->
+        <!--<artifactId>janusgraph-cql</artifactId>-->
+        <!--<version>${janusgraph.version}</version>-->
         <!--</dependency>-->
 
         <!--Include this dependency if you need cassandra or cassandrathrift as storage.backend option-->
@@ -289,20 +289,20 @@
 
         <!-- Include this dependency for ElasticSearch when using CASSANDRA -->
         <!--<dependency>-->
-            <!--<groupId>org.janusgraph</groupId>-->
-            <!--<artifactId>janusgraph-es</artifactId>-->
-            <!--<version>${janusgraph.version}</version>-->
-            <!--<scope>runtime</scope>-->
-            <!--<exclusions>-->
-                <!--<exclusion>-->
-                    <!--<groupId>ch.qos.logback</groupId>-->
-                    <!--<artifactId>logback-classic</artifactId>-->
-                <!--</exclusion>-->
-                <!--<exclusion>-->
-                    <!--<groupId>org.slf4j</groupId>-->
-                    <!--<artifactId>slf4j-log4j12</artifactId>-->
-                <!--</exclusion>-->
-            <!--</exclusions>-->
+        <!--<groupId>org.janusgraph</groupId>-->
+        <!--<artifactId>janusgraph-es</artifactId>-->
+        <!--<version>${janusgraph.version}</version>-->
+        <!--<scope>runtime</scope>-->
+        <!--<exclusions>-->
+        <!--<exclusion>-->
+        <!--<groupId>ch.qos.logback</groupId>-->
+        <!--<artifactId>logback-classic</artifactId>-->
+        <!--</exclusion>-->
+        <!--<exclusion>-->
+        <!--<groupId>org.slf4j</groupId>-->
+        <!--<artifactId>slf4j-log4j12</artifactId>-->
+        <!--</exclusion>-->
+        <!--</exclusions>-->
         <!--</dependency>-->
 
         <!-- Include this dependency for Postgres support -->
@@ -378,14 +378,14 @@
         </dependency>
 
         <!--<dependency>-->
-            <!--<groupId>org.neo4j.driver</groupId>-->
-            <!--<artifactId>neo4j-java-driver</artifactId>-->
-            <!--<version>1.4.4</version>-->
+        <!--<groupId>org.neo4j.driver</groupId>-->
+        <!--<artifactId>neo4j-java-driver</artifactId>-->
+        <!--<version>1.4.4</version>-->
         <!--</dependency>-->
         <!--<dependency>-->
-            <!--<groupId>commons-validator</groupId>-->
-            <!--<artifactId>commons-validator</artifactId>-->
-            <!--<version>1.6</version>-->
+        <!--<groupId>commons-validator</groupId>-->
+        <!--<artifactId>commons-validator</artifactId>-->
+        <!--<version>1.6</version>-->
         <!--</dependency>-->
         <!-- End dependency for Neo4j support -->
 
@@ -395,7 +395,7 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
-		</dependency>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
@@ -456,6 +456,11 @@
             <artifactId>generic-iam</artifactId>
             <version>2.0.3</version>
         </dependency>
+        <dependency>
+            <groupId>commons-codec</groupId>
+            <artifactId>commons-codec</artifactId>
+            <version>1.18.0</version>
+        </dependency>
 
     </dependencies>
 
@@ -466,7 +471,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
-                    <version>3.0.0-M5</version>
+                    <version>3.3.0</version>
                 </plugin>
             </plugins>
         </pluginManagement>
@@ -570,17 +575,21 @@
                     <excludes>
                         <exclude>dev/sunbirdrc/pojos/*</exclude>
                         <exclude>**/I*.java</exclude>
+                        <exclude>org/drools/**/*</exclude>
                     </excludes>
                 </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.3.0</version>
                 <configuration>
+                    <parallel>methods</parallel>
+                    <useUnlimitedThreads/>
                     <includes>
                         <include>${runSuite}</include>
                     </includes>
-                    <forkCount>0</forkCount>
+                    <forkCount>1</forkCount>
                 </configuration>
             </plugin>
         </plugins>
