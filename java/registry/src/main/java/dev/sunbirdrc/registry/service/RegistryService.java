@@ -8,6 +8,8 @@ import dev.sunbirdrc.registry.sink.shard.Shard;
 import org.apache.tinkerpop.gremlin.structure.Transaction;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 
+import java.util.Map;
+
 public interface RegistryService {
 
 	Vertex deleteEntityById(Shard shard, String entityName, String userId, String id) throws Exception;
@@ -21,4 +23,8 @@ public interface RegistryService {
 	void callNotificationActors(String operation, String to, String subject, String message) throws Exception;
 	void maskAndEmitEvent(JsonNode deletedNode, String index, EventType delete, String userId, String uuid) throws JsonProcessingException;
 
+	boolean exists(String entityType, Map<String, String> conditions) throws Exception;
+	boolean isUnique(String entityType, Map<String, String> conditions) throws Exception;
+	boolean exists(String entityType, String field, String value) throws Exception;
+	boolean exists(JsonNode searchQuery) throws Exception;
 }

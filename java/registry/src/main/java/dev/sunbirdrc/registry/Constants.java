@@ -26,7 +26,7 @@ public class Constants {
     public final static String TITLE = "title";
     public final static String PATH = "path";
     public final static String URL = "url";
-    public final static String DEFAULT_USER = "User";
+    public final static String DEFAULT_USER = "default";
     public final static String MINIO_URI_PREFIX = "minio://";
     public final static String HTTP_URI_PREFIX = "http://";
     public final static String HTTPS_URI_PREFIX = "https://";
@@ -37,4 +37,20 @@ public class Constants {
 
     public static final String CREDENTIAL_TEMPLATE = "credentialTemplate";
     public static final String VIEW_TEMPLATE_ID = "viewTemplateId";
+
+    // Constants for registry operations
+    public static final String LIMIT = "limit";
+    public static final String OFFSET = "offset";
+    public static final String SIGNED_HASH = "signedHash";
+    public static final String ATTESTED_DATA = "attestedData";
+    public static final String CLAIM_ID = "claimId";
+    public static final String ATTESTATION_RESPONSE = "attestationResponse";
+    public static final String ROLE_ANONYMOUS = "anonymous";
+
+    public static final String GRANT_CLAIM = "GRANT_CLAIM";
+
+    // System fields
+    public static final String OSID = "osid";
+    public static final String OSID_SCHEMA_VERSION = "osidSchemaVersion";
+    public static final String SCHEMA_VERSION = "schemaVersion";
 }

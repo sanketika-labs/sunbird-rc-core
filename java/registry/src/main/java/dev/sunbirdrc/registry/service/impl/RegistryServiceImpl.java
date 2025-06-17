@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.JsonNodeType;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
@@ -29,6 +30,7 @@ import dev.sunbirdrc.registry.sink.DatabaseProvider;
 import dev.sunbirdrc.registry.sink.OSGraph;
 import dev.sunbirdrc.registry.sink.shard.Shard;
 import dev.sunbirdrc.registry.util.*;
+import dev.sunbirdrc.registry.helper.RegistryHelper;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.tinkerpop.gremlin.structure.Graph;
 import org.apache.tinkerpop.gremlin.structure.Transaction;
@@ -38,6 +40,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -47,7 +50,7 @@ import org.sunbird.akka.core.Router;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
-
+import static dev.sunbirdrc.registry.middleware.util.Constants.*;
 import static dev.sunbirdrc.registry.Constants.*;
 import static dev.sunbirdrc.registry.exception.ErrorMessages.INVALID_ID_MESSAGE;
 
@@ -131,6 +134,10 @@ public class RegistryServiceImpl implements RegistryService {
     @Autowired
     private SchemaService schemaService;
 
+    @Autowired
+    @Lazy
+    private RegistryHelper registryHelper;
+
     @Autowired(required = false)
     private IIdGenService idGenService;
     @Value("${idgen.enabled:false}")
@@ -186,6 +193,7 @@ public class RegistryServiceImpl implements RegistryService {
             }
         }
     }
+    @Override
     public void maskAndEmitEvent(JsonNode deletedNode, String index, EventType delete, String userId, String uuid) throws JsonProcessingException {
         JsonNode maskedNode = entityTransformer.updatePrivateAndInternalFields(
                 deletedNode,
@@ -483,7 +491,11 @@ public class RegistryServiceImpl implements RegistryService {
             itemUuid = ArrayHelper.unquoteString(itemUuid);
             if (!updatedUuids.contains(itemUuid)) {
                 // delete this item
-                registryDao.deleteEntity(uuidVertexMap.get(itemUuid));
+                if(isHardDeleteEnabled) {
+                    registryDao.hardDeleteEntity(uuidVertexMap.get(itemUuid));
+                } else {
+                    registryDao.deleteEntity(uuidVertexMap.get(itemUuid));
+                }
             }
         }
     }
@@ -517,7 +529,7 @@ public class RegistryServiceImpl implements RegistryService {
                         oneElementNode.isValueNode() || oneElementNode.isArray()) {
                     logger.info("Value or array node, going to update {}", oneElement.getKey());
 
-                    if (oneElementNode.isArray()) {
+                    if (oneElementNode.isArray() && (oneElementNode.isEmpty() || oneElementNode.get(0).getNodeType().equals(JsonNodeType.OBJECT))) {
                         // Arrays are treated specially - we create a blank node and then
                         // individual items
                         String arrayRefLabel = RefLabelHelper.getArrayLabel(oneElement.getKey(), uuidPropertyName);
@@ -572,6 +584,64 @@ public class RegistryServiceImpl implements RegistryService {
             JSONUtil.merge(entityType, result, (ObjectNode) prop.getValue(), ignoredProps);
         });
         return result;
+    }
+
+    @Override
+    public boolean exists(String entityType, Map<String, String> conditions) throws Exception {
+        ObjectNode searchNode = JsonNodeFactory.instance.objectNode();
+        ArrayNode entityArray = JsonNodeFactory.instance.arrayNode();
+        entityArray.add(entityType);
+        searchNode.set(ENTITY_TYPE, entityArray);
+
+        ObjectNode filters = JsonNodeFactory.instance.objectNode();
+        conditions.forEach((key, value) -> filters.put(key, value));
+        searchNode.set(FILTERS, filters);
+
+        JsonNode result = registryHelper.searchEntity(searchNode, null);
+        return result != null && result.has(entityType) &&
+                result.get(entityType).has(ENTITY_LIST) &&
+                result.get(entityType).get(ENTITY_LIST).size() > 0;
+    }
+
+    @Override
+    public boolean isUnique(String entityType, Map<String, String> conditions) throws Exception {
+        ObjectNode searchNode = JsonNodeFactory.instance.objectNode();
+        searchNode.set("entityType", JsonNodeFactory.instance.arrayNode().add(entityType));
+
+        ObjectNode filters = JsonNodeFactory.instance.objectNode();
+        for (Map.Entry<String, String> e : conditions.entrySet()) {
+            filters.set(e.getKey(),
+                    JsonNodeFactory.instance.objectNode().put("eq", e.getValue()));
+        }
+        searchNode.set("filters", filters);
+        searchNode.put("limit", 1);
+
+        JsonNode result = registryHelper.searchEntity(searchNode, null);
+        if (result != null && result.has(entityType)) {
+            JsonNode node = result.get(entityType);
+            if (node.has("data")) {
+                return node.get("data").size() == 0;
+            }
+            throw new RuntimeException("Invalid search response for uniqueness check");
+        }
+        throw new RuntimeException("Error running uniqueness search");
+    }
+
+
+    @Override
+    public boolean exists(String entityType, String field, String value) throws Exception {
+        Map<String, String> conditions = new HashMap<>();
+        conditions.put(field, value);
+        return exists(entityType, conditions);
+    }
+
+    @Override
+    public boolean exists(JsonNode searchQuery) throws Exception {
+        JsonNode result = registryHelper.searchEntity(searchQuery, null);
+        String entityType = searchQuery.get(ENTITY_TYPE).get(0).asText();
+        return result != null && result.has(entityType) &&
+                result.get(entityType).has(ENTITY_LIST) &&
+                result.get(entityType).get(ENTITY_LIST).size() > 0;
     }
 
 }

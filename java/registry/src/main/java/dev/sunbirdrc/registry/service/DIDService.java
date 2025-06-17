@@ -29,6 +29,7 @@ import java.util.*;
 import java.util.stream.Stream;
 
 import static dev.sunbirdrc.registry.middleware.util.Constants.*;
+import org.springframework.context.annotation.Lazy;
 
 @Component
 @ConditionalOnProperty(value = "did.enabled", havingValue = "true")
@@ -51,6 +52,7 @@ public class DIDService implements HealthIndicator {
     @Autowired(required = false)
     private ISearchService searchService;
     @Autowired(required = false)
+    @Lazy
     private RegistryHelper registryHelper;
     @Autowired
     private Gson gson;
