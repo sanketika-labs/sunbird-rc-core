@@ -45,12 +45,12 @@ public class XValidationService {
             try {
                 if (!validateRule(ruleExpression, data)) {
                     String formattedDescription = getDefaultErrorMessage(ruleName,entityTypeMain);
-                    throw new MiddlewareHaltException(String.format("Error while adding  '%s': %s", entityTypeMain, formattedDescription));
+                    throw new MiddlewareHaltException(String.format("Error while adding '%s': %s", entityTypeMain, formattedDescription));
                 }
             } catch (Exception e) {
                 logger.error("Error validating rule {}: {}", ruleName, e.getMessage());
                 String formattedDescription = getDefaultErrorMessage(ruleName,entityTypeMain);
-                throw new MiddlewareHaltException(String.format("Error while adding '%s': %s", entityTypeMain, formattedDescription.isEmpty() ? e.getMessage() : formattedDescription));
+                throw new MiddlewareHaltException(String.format("Error while adding '%s': %s", entityTypeMain, formattedDescription));
             }
         }
     }
