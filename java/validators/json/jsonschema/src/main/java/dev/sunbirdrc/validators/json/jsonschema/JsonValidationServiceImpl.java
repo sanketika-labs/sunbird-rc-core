@@ -87,8 +87,12 @@ public class JsonValidationServiceImpl implements IValidate {
 						// Pass full schema node (with _osConfig) for rule access
 						xValidationService.validate(schema, actualDataNode);
 					}
-				} catch (Exception e) {
-					throw new RuntimeException("Error during x-validation: " + e.getMessage(), e);
+				}
+				catch (MiddlewareHaltException e) {
+					throw e;
+				}
+				catch (Exception e) {
+					throw new RuntimeException(e.getMessage(), e);
 				}
 			} catch (ValidationException e) {
 				logger.error("Validation Exception : " + e.getAllMessages());
