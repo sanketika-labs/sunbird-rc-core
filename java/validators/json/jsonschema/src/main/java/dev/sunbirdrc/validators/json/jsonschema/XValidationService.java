@@ -1,6 +1,5 @@
 package dev.sunbirdrc.validators.json.jsonschema;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import dev.sunbirdrc.registry.middleware.MiddlewareHaltException;
 import dev.sunbirdrc.pojos.RegistryLookup;
 import org.slf4j.Logger;
@@ -8,7 +7,6 @@ import org.slf4j.LoggerFactory;
 import org.json.JSONObject;
 import org.everit.json.schema.Schema;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.everit.json.schema.loader.SchemaLoader;
 import org.json.JSONArray;
 
 import java.util.HashMap;
@@ -39,17 +37,15 @@ public class XValidationService {
         while (keys.hasNext()) {
             String ruleName = keys.next();
             JSONObject ruleNode = xValidationNode.getJSONObject(ruleName);
-
             String ruleExpression = ruleNode.getString("rule");
-            String description = ruleNode.has("description") ? ruleNode.getString("description") : "";
-
+            String errMsg = ruleNode.has("errMessage") ? ruleNode.getString("errMessage") : "error while validating rule";
             try {
                 if (!validateRule(ruleExpression, data)) {
-                    throw new MiddlewareHaltException(String.format("X-Validation failed for rule '%s': %s", ruleName, description));
+                    throw new MiddlewareHaltException(String.format(errMsg));
                 }
             } catch (Exception e) {
                 logger.error("Error validating rule {}: {}", ruleName, e.getMessage());
-                throw new MiddlewareHaltException(String.format("X-Validation failed for rule '%s': %s", ruleName, e.getMessage()));
+                throw new MiddlewareHaltException(String.format(errMsg));
             }
         }
     }
@@ -102,7 +98,7 @@ public class XValidationService {
             throw new IllegalArgumentException("Invalid registry existence rule format");
         }
 
-         entityType = parts[1];
+        entityType = parts[1];
 
 
         if (ruleExpression.contains("{")) {
