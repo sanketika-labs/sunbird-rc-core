@@ -9,6 +9,8 @@ import org.everit.json.schema.Schema;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.json.JSONArray;
 
+import java.time.LocalDate;
+import java.time.Period;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -55,6 +57,9 @@ public class XValidationService {
             return validateRegistryExistence(ruleExpression, data);
         } else if (ruleExpression.contains("isUniqueInRegistry")) {
             return validateRegistryUniqueness(ruleExpression, data);
+        }
+        else if(ruleExpression.contains("validDateOfBirth")) {
+            return validDateOfBirth(ruleExpression, data);
         } else {
             return validateEquality(ruleExpression, data);
         }
@@ -136,11 +141,11 @@ public class XValidationService {
             String field = matcher.group(2);
             String valueField = matcher.group(3).trim();
 
-
-            if (!data.has(valueField)) {
+            Object valueObj = getValueByPath(data, valueField);
+            if (valueObj == null) {
                 throw new IllegalArgumentException("Field not found: " + valueField);
             }
-            String value = data.get(valueField).toString();
+            String value = valueObj.toString();
             JSONObject searchQuery = new JSONObject();
             searchQuery.put("entityType", new JSONArray().put(entityType));
 
@@ -165,6 +170,49 @@ public class XValidationService {
         return registryLookup.isUnique(entityType, conditions);
     }
 
+    private boolean validDateOfBirth(String ruleExpression, JSONObject data) throws Exception {
+        // validates Date of Birth : age should be greater than 5 and less than 25
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("^validDateOfBirth\\(\\s*'([^']+)'\\s*,\\s*(\\d+)\\s*,\\s*(\\d+)\\s*\\)$");
+        java.util.regex.Matcher matcher = pattern.matcher(ruleExpression);
+        if (!matcher.find()) {
+            throw new IllegalArgumentException("Invalid date of birth validation rule format");
+        }
+        String dobField = matcher.group(1).trim();
+        int minAge = Integer.parseInt(matcher.group(2));
+        int maxAge = Integer.parseInt(matcher.group(3));
+
+        if(!data.has(dobField)) {
+            throw new MiddlewareHaltException("Date of Birth field not found: " + dobField);
+        }
+        String dobString = data.getString(dobField);
+        try{
+            LocalDate dob = LocalDate.parse(dobString);
+            LocalDate today = LocalDate.now();
+            int age= Period.between(dob, today).getYears();
+            return age >= minAge && age <= maxAge;
+        }
+        catch (java.time.format.DateTimeParseException e) {
+            logger.error("Invalid date format for Date of Birth: {}", dobString);
+            return false;
+        }
+    }
+
+    private Object getValueByPath(JSONObject data, String path) {
+        String[] parts = path.split("\\.");
+        Object current = data;
+        for (String part : parts) {
+            if (current instanceof JSONObject) {
+                JSONObject currentObj = (JSONObject) current;
+                if (!currentObj.has(part)) {
+                    return null;
+                }
+                current = currentObj.get(part);
+            } else {
+                return null;
+            }
+        }
+        return current;
+    }
     private Map<String, String> parseConditions(String conditionsStr, JSONObject data) throws Exception {
         Map<String, String> conditions = new HashMap<>();
         String[] conditionPairs = conditionsStr.split(",\\s*");  // Split by comma followed by optional whitespace
@@ -177,11 +225,11 @@ public class XValidationService {
             String field = keyValue[0].trim().replaceAll("'", "");
             String valueField = keyValue[1].trim();
 
-            if (!data.has(valueField)) {
+            Object valueObj = getValueByPath(data, valueField);
+            if (valueObj == null) {
                 throw new IllegalArgumentException("Field not found: " + valueField);
             }
-
-            conditions.put(field, data.get(valueField).toString());
+            conditions.put(field, valueObj.toString());
         }
         return conditions;
     }
