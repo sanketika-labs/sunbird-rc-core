@@ -1,0 +1,84 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "type": "object",
+  "properties": {
+    "Commune": {
+      "$ref": "#/definitions/Commune"
+    }
+  },
+  "required": [
+    "Commune"
+  ],
+  "title": "Commune",
+  "definitions": {
+    "Commune": {
+      "$id": "#/properties/Commune",
+      "type": "object",
+      "title": "The Commune Schema",
+      "required": [
+        "code",
+        "districtCode",
+        "provinceCode",
+        "name_en",
+        "name_kh"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "pattern": "^[0-9]{5,6}$",
+          "description": "commune code"
+        },
+        "districtCode": {
+          "type": "string",
+          "pattern": "^[0-9]{3,4}$",
+          "description": "Reference to the district code"
+        },
+        "provinceCode": {
+          "type": "string",
+          "pattern": "^[0-9]{1,2}$",
+          "description": "Reference to the province code"
+        },
+        "name_en": {
+          "type": "string",
+          "description": "Name of the commune in English"
+        },
+        "name_kh": {
+          "type": "string",
+          "description": "Name of the commune in Khmer"
+        }
+      }
+    }
+  },
+  "_osConfig": {
+    "systemFields": [
+      "osCreatedAt",
+      "osUpdatedAt",
+      "osCreatedBy",
+      "osUpdatedBy"
+    ],
+    "uniqueIndexFields": [
+      "code"
+    ],
+    "privateFields": [],
+    "roles": [
+      "admin"
+    ],
+    "inviteRoles": [
+      "admin"
+    ],
+    "ownershipAttributes": [
+    ],
+    "x-validation": {
+      "districtExists": {
+        "rule": "existsInRegistry('District', {'code': districtCode, 'provinceCode': provinceCode})",
+        "description": "Verifies District with specified code exists under given province",
+        "errMessage": "Error while validating District: District with the specified code does not exist under the given province"
+      },
+      "provinceExists": {
+        "rule": "existsInRegistry('Province', 'code', provinceCode)",
+        "description": "Verifies Province with specified code exists in registry",
+        "errMessage": "Error while validating Province: Province with code does not exist"
+      }
+    }
+  }
+}

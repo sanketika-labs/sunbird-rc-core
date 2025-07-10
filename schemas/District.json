@@ -1,0 +1,73 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "type": "object",
+  "properties": {
+    "District": {
+      "$ref": "#/definitions/District"
+    }
+  },
+  "required": [
+    "District"
+  ],
+  "title": "District",
+  "definitions": {
+    "District": {
+      "$id": "#/properties/District",
+      "type": "object",
+      "title": "The District Schema",
+      "required": [
+        "code",
+        "provinceCode",
+        "name_en",
+        "name_kh"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "pattern": "^[0-9]{3,4}$",
+          "description": "digit district code"
+        },
+        "provinceCode": {
+          "type": "string",
+          "pattern": "^[0-9]{1,2}$",
+          "description": "Reference to the province code"
+        },
+        "name_en": {
+          "type": "string",
+          "description": "Name of the district in English"
+        },
+        "name_kh": {
+          "type": "string",
+          "description": "Name of the district in Khmer"
+        }
+      }
+    }
+  },
+  "_osConfig": {
+    "systemFields": [
+      "osCreatedAt",
+      "osUpdatedAt",
+      "osCreatedBy",
+      "osUpdatedBy"
+    ],
+    "uniqueIndexFields": [
+      "code"
+    ],
+    "privateFields": [],
+    "roles": [
+      "admin"
+    ],
+    "inviteRoles": [
+      "admin"
+    ],
+    "ownershipAttributes": [
+    ],
+    "x-validation": {
+      "provinceExists": {
+        "rule": "existsInRegistry('Province', 'code', provinceCode)",
+        "description": "Verifies Province with specified code exists in the registry",
+        "errMessage": "Error while validating District: Province with the specified code does not exist in registry"
+      }
+    }
+  }
+}

@@ -1,0 +1,233 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "type": "object",
+  "properties": {
+    "Student": {
+      "$ref": "#/definitions/Student"
+    }
+  },
+  "required": ["Student"],
+  "title": "Student",
+  "definitions": {
+    "Student": {
+      "$id": "#/properties/Student",
+      "type": "object",
+      "title": "The Student Schema",
+      "required": [
+        "studentId",
+        "fullNameInKhmer",
+        "fullNameInLatin"
+      ],
+      "properties": {
+        "studentId": {
+          "type": "string",
+          "pattern": "^[0-9]{8}$",
+          "description": "Unique 8-digit student identifier"
+        },
+        "fullNameInKhmer": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100,
+          "pattern": "^[\\u1780-\\u17FF\\s]+$",
+          "description": "Full name in Khmer script"
+        },
+        "fullNameInLatin": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100,
+          "pattern": "^[A-Za-z\\s]+$",
+          "description": "Full name in Latin script"
+        },
+        "gender": {
+          "type": "string",
+          "enum": ["Male", "Female", "Other"],
+          "description": "Gender: Male, Female, Other"
+        },
+        "dateOfBirth": {
+          "type": "string",
+          "format": "date",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "Date of birth in YYYY-MM-DD format"
+        },
+        "placeOfBirth": {
+          "type": "object",
+          "properties": {
+          "provinceCode": {
+          "type": "string",
+          "pattern": "^[0-9]{1,2}$",
+          "description": "2-digit code identifying the province"
+        },
+        "districtCode": {
+          "type": "string",
+          "pattern": "^[0-9]{2,10}$",
+          "description": "code identifying the district within the province"
+        },
+        "communeCode": {
+          "type": "string",
+          "pattern": "^[0-9]{2,10}$",
+          "description": "code identifying the commune within the district"
+        },
+        "villageCode": {
+          "type": "string",
+          "pattern": "^[0-9]{2,10}$",
+          "description": "code identifying the commune within the district"
+        }
+        
+          },
+          "description": "Place of birth with hierarchical location names"
+        },
+        "mobileNumber": {
+          "type": "string",
+          "pattern": "^(\\+[1-9][0-9]{1,3}|0)[1-9][0-9]{6,10}$",
+          "description": "Student's mobile number with international country code or local format"
+        },
+        "previousClass": {
+          "type": "string",
+          "pattern": "^Grade\\s[1-9][0-2]?[A-Z]?$",
+          "description": "Previous class in format 'Grade XY' where X is grade number and Y is optional section"
+        },
+        "previousSchoolId": {
+          "type": "string",
+          "pattern": "^[0-9]{8,14}$",
+          "description": "identifier of previous school"
+        },
+        "fatherName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100,
+          "pattern": "^[A-Za-z\\s]+$",
+          "description": "Father's name"
+        },
+        "fatherOccupation": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100,
+          "pattern": "^[A-Za-z\\s]+$",
+          "description": "Father's occupation"
+        },
+        "fatherMobileNumber": {
+          "type": "string",
+          "pattern": "^(\\+[1-9][0-9]{1,3}|0)[1-9][0-9]{6,10}$",
+          "description": "Father's mobile number"
+        },
+        "motherName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100,
+          "pattern": "^[A-Za-z\\s]+$",
+          "description": "Mother's name"
+        },
+        "motherOccupation": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100,
+          "pattern": "^[A-Za-z\\s]+$",
+          "description": "Mother's occupation"
+        },
+        "motherMobileNumber": {
+          "type": "string",
+          "pattern": "^(\\+[1-9][0-9]{1,3}|0)[1-9][0-9]{6,10}$",
+          "description": "Mother's mobile number"
+        },
+        "currentResidence": {
+          "type": "object",
+          "properties": {
+            "provinceCode": {
+          "type": "string",
+          "pattern": "^[0-9]{1,2}$",
+          "description": "code identifying the province"
+        },
+        "districtCode": {
+          "type": "string",
+          "pattern": "^[0-9]{2,10}$",
+          "description": "code identifying the district within the province"
+        },
+        "communeCode": {
+          "type": "string",
+          "pattern": "^[0-9]{2,10}$",
+          "description": "code identifying the commune within the district"
+        },
+        "villageCode": {
+          "type": "string",
+          "pattern": "^[0-9]{2,10}$",
+          "description": "code identifying the commune within the district"
+        }
+          },
+          "description": "Current residence with hierarchical location names"
+        }
+      }
+    }
+  },
+  "_osConfig": {
+    "systemFields": [
+      "osCreatedAt",
+      "osUpdatedAt",
+      "osCreatedBy",
+      "osUpdatedBy"
+    ],
+    "uniqueIndexFields": [
+      "studentId", "mobileNumber"
+    ],
+    "privateFields": [],
+    "roles": [
+      "admin"
+    ],
+    "inviteRoles": [
+      "admin"
+    ],
+    "ownershipAttributes": [],
+   "x-validation": {
+      "previousSchoolIdExists": {
+        "rule": "existsInRegistry('School', 'schoolId', previousSchoolId)",
+        "description": "Verifies previousSchoolId exists in the School registry",
+        "errMessage": "Previous school with the specified ID does not exist in registry"
+      },
+      "validAge": {
+        "rule": "validDateOfBirth('dateOfBirth',5,25)",
+        "description": "Ensures student age is between 5 and 25 years based on dateOfBirth",
+        "errMessage": "Invalid age: Student must be between 5 and 25 years old"
+      },
+      "provinceExistsForPlaceOfBirth": {
+        "rule": "existsInRegistry('Province', 'code', placeOfBirth.provinceCode)",
+        "description":"Verifies Province with specified code exists in registry",
+        "errMessage": "Province with the specified code in place of birth does not exist in registry"
+      },
+      "provinceExistsForCurrentResidence": {
+        "rule": "existsInRegistry('Province', 'code', currentResidence.provinceCode)",
+        "description": "Verifies province exists in the Province registry",
+        "errMessage": "Province with the specified code in current residence does not exist in registry"
+      },
+      "districtExistsForPlaceOfBirth": {
+        "rule": "existsInRegistry('District', {'code': placeOfBirth.districtCode, 'provinceCode': placeOfBirth.provinceCode})",
+        "description": "Verifies districtCode exists under the specified province",
+        "errMessage": "District with the specified code in place of birth does not exist under the given province"
+      },
+      "districtExistsForCurrentResidence": {
+        "rule": "existsInRegistry('District', {'code': currentResidence.districtCode, 'provinceCode': currentResidence.provinceCode})",
+        "description": "Verifies districtCode exists under the specified province",
+        "errMessage": "District with the specified code in current residence does not exist under the given province"
+      },
+      "communeExistsForPlaceOfBirth": {
+        "rule": "existsInRegistry('Commune', {'code': placeOfBirth.communeCode, 'districtCode': placeOfBirth.districtCode})",
+        "description": "Verifies communeCode exists under the specified district",
+        "errMessage": "Commune with the specified code in place of birth does not exist under the given district"
+      },
+      "communeExistsForCurrentResidence": {
+        "rule": "existsInRegistry('Commune', {'code': currentResidence.communeCode, 'districtCode': currentResidence.districtCode})",
+        "description": "Verifies communeCode exists under the specified district",
+        "errMessage": "Commune with the specified code in current residence does not exist under the given district"
+      },
+      "villageExistsForPlaceOfBirth": {
+        "rule": "existsInRegistry('Village', {'code': placeOfBirth.villageCode, 'communeCode': placeOfBirth.communeCode})",
+        "description": "Verifies village exists in the Village registry",
+        "errMessage": "Village with the specified code in place of birth does not exist in registry"
+      },
+      "villageExistsForCurrentResidence": {
+        "rule": "existsInRegistry('Village', {'code': currentResidence.villageCode, 'communeCode': currentResidence.communeCode})",
+        "description": "Verifies village exists in the Village registry",
+        "errMessage": "Village with the specified code in current residence does not exist in registry"
+      }
+
+    }
+  }
+}

@@ -1,0 +1,94 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "type": "object",
+  "properties": {
+    "Village": {
+      "$ref": "#/definitions/Village"
+    }
+  },
+  "required": [
+    "Village"
+  ],
+  "title": "Village",
+  "definitions": {
+    "Village": {
+      "$id": "#/properties/Village",
+      "type": "object",
+      "title": "The Village Schema",
+      "required": [
+        "code",
+        "districtCode",
+        "communeCode",
+        "name_en",
+        "name_kh"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "pattern": "^[0-9]{7,8}$",
+          "description": "Village code"
+        },
+        "communeCode": {
+          "type": "string",
+          "pattern": "^[0-9]{2,6}$",
+          "description": "Reference to the Commune code"
+        },
+        "districtCode": {
+          "type": "string",
+          "pattern": "^[0-9]{2,4}$",
+          "description": "Reference to the district code"
+        },
+        "provinceCode": {
+          "type": "string",
+          "pattern": "^[0-9]{1,2}$",
+          "description": "Reference to the province code"
+        },
+        "name_en": {
+          "type": "string",
+          "description": "Name of the Village"
+        },
+        "name_kh": {
+          "type": "string",
+          "description": "Name of the Village"
+        }
+      }
+    }
+  },
+  "_osConfig": {
+    "systemFields": [
+      "osCreatedAt",
+      "osUpdatedAt",
+      "osCreatedBy",
+      "osUpdatedBy"
+    ],
+    "uniqueIndexFields": [
+      "code"
+    ],
+    "privateFields": [],
+    "roles": [
+      "admin"
+    ],
+    "inviteRoles": [
+      "admin"
+    ],
+    "ownershipAttributes": [
+    ],
+    "x-validation": {
+      "communeExistsUnderDistrict": {
+        "rule": "existsInRegistry('Commune', {'code': communeCode, 'districtCode': districtCode})",
+        "description": "Verifies communeCode exists under the specified district",
+        "errMessage": "Error while validating Commune: Commune with the specified code does not exist under the given district"
+      },
+      "districtExistsUnderProvince": {
+        "rule": "existsInRegistry('District', {'code': districtCode, 'provinceCode': provinceCode})",
+        "description": "Verifies districtCode exists under the specified province",
+        "errMessage": "Error while validating District: District with the specified code does not exist under the given province"
+      },
+      "provinceExists": {
+        "rule": "existsInRegistry('Province', 'code', provinceCode)",
+        "description":"Verifies Province with specified code exists in registry",
+        "errMessage": "Error while validating Province: Province with the specified code does not exist in registry"
+      }
+    }
+  }
+}
