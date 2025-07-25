@@ -78,21 +78,38 @@ public class XValidationService {
         if (rightExpr.contains("+")) {
             String[] rightParts = rightExpr.split("\\+");
             StringBuilder concatenated = new StringBuilder();
+            boolean allRightFieldsPresent = true;
+
             for (String part : rightParts) {
                 String field = part.trim();
                 if (data.has(field)) {
                     concatenated.append(data.get(field));
                 } else {
-                    throw new IllegalArgumentException("Field not found: " + field);
+                    logger.info("Right side field {} not found, skipping equality validation", field);
+                    allRightFieldsPresent = false;
+                    break;
                 }
             }
+
+            // Case 1: Any component field missing (provinceCode, districtCode, etc.)
+            if (!allRightFieldsPresent) {
+                logger.info("Skipping equality validation: missing component fields");
+                return true;
+            }
+
             rightExpr = concatenated.toString();
         } else if (data.has(rightExpr)) {
             // If right side is a field reference, get its value
             rightExpr = data.get(rightExpr).toString();
         }
 
-        String leftValue = data.has(leftExpr) ? data.get(leftExpr).toString() : "";
+        // Case 2: Left side field missing (schoolId not provided)
+        if (!data.has(leftExpr)) {
+            logger.info("Left side field {} not found, skipping equality validation", leftExpr);
+            return true;
+        }
+
+        String leftValue = data.get(leftExpr).toString();
         return leftValue.equals(rightExpr);
     }
 
@@ -115,7 +132,10 @@ public class XValidationService {
 
             String conditionsStr = ruleExpression.substring(startIndex + 1, endIndex).trim();
             Map<String, String> conditions = parseConditions(conditionsStr, data);
-
+            if (conditions.isEmpty()) {
+                logger.info("Skipping multi-field validation: no valid conditions found");
+                return true;
+            }
             // Create a search query JSON for multiple fields
             JSONObject searchQuery = new JSONObject();
             searchQuery.put("entityType", new JSONArray().put(entityType));
@@ -143,7 +163,7 @@ public class XValidationService {
 
             Object valueObj = getValueByPath(data, valueField);
             if (valueObj == null) {
-                throw new IllegalArgumentException("Field not found: " + valueField);
+                return true;
             }
             String value = valueObj.toString();
             JSONObject searchQuery = new JSONObject();
@@ -167,6 +187,10 @@ public class XValidationService {
         String entityType = matcher.group(1);
         String conditionsStr = matcher.group(2).trim();
         Map<String, String> conditions = parseConditions(conditionsStr, data);
+        if(conditions.isEmpty()) {
+            logger.info("Skipping uniqueness validation: no valid conditions found");
+            return true;
+        }
         return registryLookup.isUnique(entityType, conditions);
     }
 
@@ -182,7 +206,7 @@ public class XValidationService {
         int maxAge = Integer.parseInt(matcher.group(3));
 
         if(!data.has(dobField)) {
-            throw new MiddlewareHaltException("Date of Birth field not found: " + dobField);
+            return true;
         }
         String dobString = data.getString(dobField);
         try{
@@ -227,7 +251,8 @@ public class XValidationService {
 
             Object valueObj = getValueByPath(data, valueField);
             if (valueObj == null) {
-                throw new IllegalArgumentException("Field not found: " + valueField);
+                logger.debug("Field {} not found, skipping condition", valueField);
+                continue;
             }
             conditions.put(field, valueObj.toString());
         }
