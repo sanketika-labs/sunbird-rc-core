@@ -186,6 +186,19 @@ public class XValidationService {
         }
         String entityType = matcher.group(1);
         String conditionsStr = matcher.group(2).trim();
+        String[] conditionPairs = conditionsStr.split(",\\s*");
+
+        for (String pair : conditionPairs) {
+            String[] keyValue = pair.split(":\\s*");
+            if (keyValue.length == 2) {
+                String valueField = keyValue[1].trim();
+                if (getValueByPath(data, valueField) == null) {
+                    logger.info("Skipping uniqueness validation: required field {} missing", valueField);
+                    return true;
+                }
+            }
+        }
+
         Map<String, String> conditions = parseConditions(conditionsStr, data);
         if(conditions.isEmpty()) {
             logger.info("Skipping uniqueness validation: no valid conditions found");
