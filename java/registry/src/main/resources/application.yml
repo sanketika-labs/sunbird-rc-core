@@ -50,7 +50,7 @@ invite:
 cors:
   # By default, allowing all domains to access this service. Choose a particular domain,
   # in production. For example, http://otherservice.com:9090, to allow requests from otherservice.com.
-  allowedOrigin: ${cors_allowedOrigin:http://localhost:5173,http://localhost:4433,http://localhost:4444}
+  allowedOrigin: ${cors_allowedOrigin:*}
 
 perf:
   monitoring:
