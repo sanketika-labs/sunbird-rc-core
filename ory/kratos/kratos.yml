@@ -1,0 +1,141 @@
+version: v1.0.0
+
+dsn: ${KRATOS_DB_DSN}
+
+# ── Server ─────────────────────────────────────────────────────────────────────
+serve:
+  public:
+    base_url: ${KRATOS_PUBLIC_URL}
+    cors:
+      enabled: true
+      allowed_origins:
+        - ${CORS_ORIGIN_1}
+        - ${CORS_ORIGIN_2}
+        - ${CORS_ORIGIN_3}
+        - ${CORS_ORIGIN_4}
+      allowed_methods:
+        - POST
+        - GET
+        - PUT
+        - PATCH
+        - DELETE
+      allowed_headers:
+        - Authorization
+        - Content-Type
+        - X-Session-Token
+        - X-CSRF-Token
+      exposed_headers:
+        - Content-Type
+  admin:
+    base_url: ${KRATOS_ADMIN_URL}
+
+# ── Self-Service Flows ─────────────────────────────────────────────────────────
+selfservice:
+  default_browser_return_url: ${KRATOS_DEFAULT_RETURN_URL}
+
+  allowed_return_urls:
+    - ${ALLOWED_RETURN_URL_1}
+    - ${ALLOWED_RETURN_URL_2}
+    - ${ALLOWED_RETURN_URL_3}
+    - ${ALLOWED_RETURN_URL_4}
+    - ${ALLOWED_RETURN_URL_5}
+    - ${ALLOWED_RETURN_URL_6}
+    - ${ALLOWED_RETURN_URL_7}
+    - ${ALLOWED_RETURN_URL_8}
+
+  methods:
+    password:
+      enabled: false
+    oidc:
+      enabled: true
+      config:
+        providers:
+          - id: cuenta-digital
+            provider: generic
+            client_id: ${OIDC_CLIENT_ID}
+            client_secret: ${OIDC_CLIENT_SECRET}
+            issuer_url: ${OIDC_ISSUER_URL}
+            scope:
+              - openid
+              - email
+              - profile
+            mapper_url: file:///etc/config/kratos/oidc.cuenta.jsonnet
+    totp:
+      enabled: false
+    lookup_secret:
+      enabled: false
+    link:
+      enabled: false
+    code:
+      enabled: false
+
+  flows:
+    error:
+      ui_url: ${KRATOS_ERROR_UI_URL}
+
+    settings:
+      ui_url: ${KRATOS_SETTINGS_UI_URL}
+      lifespan: 10m
+      after:
+        default_browser_return_url: ${KRATOS_DEFAULT_RETURN_URL}
+
+    recovery:
+      enabled: false
+
+    verification:
+      enabled: true
+      ui_url: ${KRATOS_VERIFICATION_UI_URL}
+      after:
+        default_browser_return_url: ${KRATOS_DEFAULT_RETURN_URL}
+
+    logout:
+      after:
+        default_browser_return_url: ${KRATOS_LOGOUT_RETURN_URL}
+
+    login:
+      ui_url: ${KRATOS_LOGIN_UI_URL}
+      lifespan: 10m
+      after:
+        default_browser_return_url: ${KRATOS_DEFAULT_RETURN_URL}
+
+    registration:
+      ui_url: ${KRATOS_REGISTRATION_UI_URL}
+      lifespan: 10m
+      after:
+        default_browser_return_url: ${KRATOS_DEFAULT_RETURN_URL}
+
+# ── Identity Schema ────────────────────────────────────────────────────────────
+identity:
+  default_schema_id: default
+  schemas:
+    - id: default
+      url: file:///etc/config/kratos/identity.schema.json
+
+# ── Secrets ────────────────────────────────────────────────────────────────────
+secrets:
+  cookie:
+    - ${KRATOS_COOKIE_SECRET}
+  cipher:
+    - ${KRATOS_CIPHER_SECRET}
+
+# ── Courier (SMTP required by schema even when unused) ────────────────────────
+courier:
+  smtp:
+    connection_uri: ${KRATOS_SMTP_CONNECTION_URI}
+
+ciphers:
+  algorithm: xchacha20-poly1305
+
+hashers:
+  algorithm: bcrypt
+  bcrypt:
+    cost: 8
+
+session:
+  whoami:
+    required_aal: aal1
+
+log:
+  level: debug
+  format: text
+  leak_sensitive_values: true

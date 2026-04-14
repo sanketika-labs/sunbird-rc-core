@@ -17,11 +17,11 @@ spring:
 
 oauth2:
   resources:
-    - uri: ${oauth2_resource_uri:http://localhost:8080/auth/realms/sunbird-rc}
+    - uri: ${oauth2_resource_uri:http://localhost:4444}
       properties:
         emailPath: ${oauth2_resource_email_path:email}
         consentPath: ${oauth2_resource_consent_path:consent}
-        rolesPath: ${oauth2_resource_roles_path:realm_access.roles}
+        rolesPath: ${oauth2_resource_roles_path:role}
         entityPath: ${oauth2_resource_entity_path:entity}
         userIdPath: ${oauth2_resource_user_id_path:sub}
 
@@ -67,6 +67,7 @@ registry:
     base: ${registry_context_base:http://localhost:8081/}
   system:
     base: ${registry_system_base:http://localhost:8081/sunbirdrc/}
+    base_roles: ${registry_system_base_roles:admin}
   rootEntity:
     type: ${registry_rootentity_type:Teacher}
   schema:
@@ -80,7 +81,7 @@ registry:
     host: ${redis_host:localhost}
     port: ${redis_port:6379}
   hard_delete_enabled: ${hard_delete_enabled:false}
-  expandReference: ${expand_reference:false}
+  expandReference: ${expand_reference:true}
 workflow:
   enabled: ${workflow.enable:true}
 
@@ -474,15 +475,15 @@ signature:
 # suffixSeperator : specifies the separator used between entity name and suffix. If audit schema name is Teacher_Audit.json, the suffixSeperator is _.
 
 audit:
-  enabled: true
-  vc-enabled: true
+  enabled: ${audit_enabled:false}
+  vc-enabled: ${audit_vc_enabled:false}
   frame:
-    store: DATABASE
-    suffix: Audit
-    suffixSeparator: _
+    store: ${audit_frame_store:DATABASE}
+    suffix: ${audit_suffix:Audit}
+    suffixSeparator: ${audit_suffixSeparator:_}
 
 authentication:
-  enabled: ${authentication_enabled:true}
+  enabled: ${authentication_enabled:false}
   publicKey:  ${authentication_publickey:MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqe1lVD9jnQWQce62e2Q44tACqBIt5UZyGzCegxax2gddj4xotY5BDxaxuJRGKDLRpm8lPNHxX8dce8SUVAMBfk85rL+Bxv1mjspKo7Q5qsFm9TGcvE4e/4xhgpMjw6dCFt8+S87jvRjmDHjakGMooOls1kjppQiklSEZ0lW3Crqet4RNjb1FNJ+2Jg26frm8i2cpb2wRnmLDuQ9sAnHCxAD2rGxSGLXhKABptbMeTVx25eh+PVISjc78uOhAnMwOHKApVBGnVCfcUoVYqfkX8XcPQU9ybmAi27vp9xZqMfh6I56Tl4fsWYBgf8ZMl0UWyRR3PNmo/0kxon1d3zqFnwIDAQAB}
   realm:  ${authentication_realm:PartnerRegistry}
   url:  ${authentication_url:http://localhost:8443/auth/}
@@ -546,9 +547,3 @@ elastic:
     # elastic-search connection info
     connection_url: ${elastic_search_connection_url:localhost:9200}
 
-idgen:
-  enabled: true
-  tenantId: default
-  healthCheckURL: http://localhost:8088/egov-idgen/health
-  generateURL: http://localhost:8088/egov-idgen/id/_generate
-  idFormatURL: http://localhost:8088/egov-idgen/id/_format/add

@@ -1,0 +1,412 @@
+# =============================================================================
+# Sunbird RC — Minimal Client Deployment Stack
+# =============================================================================
+# Combines the RC core services + ORY auth stack into a single file.
+# Excludes: Elasticsearch, Keycloak, Kafka, MinIO, claim-ms, metrics, etc.
+# Registry uses native PostgreSQL search (no Elasticsearch needed).
+#
+# One-time setup:
+#   docker network create sunbird-rc
+#   bash setup_vault.sh    # generates keys.txt + VAULT_TOKEN in .env
+#
+# Start backend:
+#   docker compose -f docker-compose-v2.yml --env-file .env up -d
+#
+# Start frontend (separate terminal):
+#   cd ../rc-admin && npm install && npm run dev
+#
+# Bootstrap first admin (run after registry is healthy):
+#   curl -s -X POST http://localhost:8081/api/v1/Employee/invite \
+#     -H "Content-Type: application/json" \
+#     -d '{"fullName":"Admin","email":"admin@company.com","role":"admin"}'
+#
+# Port map:
+#   5432  PostgreSQL
+#   8081  Registry
+#   8200  Vault
+#   3332  Identity Service
+#   3333  Credential Schema
+#   3005  Credential Service (host 3005 → container 3000)
+#   4433  Kratos Public
+#   4434  Kratos Admin
+#   4444  Hydra Public
+#   4445  Hydra Admin
+# =============================================================================
+
+services:
+
+  # ── Database ─────────────────────────────────────────────────────────────────
+  db:
+    image: postgres:16
+    volumes:
+      - ./${DB_DIR-db-data}:/var/lib/postgresql/data
+      - ./init-db.sh:/docker-entrypoint-initdb.d/01-init-db.sh
+      - ./init-db.sql.template:/docker-entrypoint-initdb.d/init-db.sql.template
+    ports:
+      - '5432:5432'
+    environment:
+      - POSTGRES_DB=registry
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - KRATOS_DB_PASSWORD=${KRATOS_DB_PASSWORD}
+      - HYDRA_DB_PASSWORD=${HYDRA_DB_PASSWORD}
+      - KETO_DB_PASSWORD=${KETO_DB_PASSWORD}
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sunbird-rc
+
+  # ── Vault ────────────────────────────────────────────────────────────────────
+  vault:
+    image: vault:1.13.3
+    restart: always
+    environment:
+      - VAULT_ADDR=http://127.0.0.1:8200
+    cap_add:
+      - IPC_LOCK
+    command: vault server -config=/vault/config/vault.json
+    volumes:
+      - ./services/identity-service/vault/vault.json:/vault/config/vault.json
+      - ./vault-data:/vault/file
+    ports:
+      - '8200:8200'
+    healthcheck:
+      test:
+        ['CMD-SHELL', 'wget -q --spider http://127.0.0.1:8200/v1/sys/health || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    networks:
+      - sunbird-rc
+
+  # ── Vault Unsealer ────────────────────────────────────────────────────────────
+  vault-unsealer:
+    image: curlimages/curl:8.6.0
+    restart: on-failure
+    depends_on:
+      vault:
+        condition: service_started
+    volumes:
+      - ./keys.txt:/keys.txt:ro
+    command: >
+      sh -c "
+        echo 'Waiting for Vault HTTP API...';
+        until curl -s http://vault:8200/v1/sys/health 2>/dev/null | grep -q 'initialized'; do
+          echo 'Vault not ready, retrying...'; sleep 2;
+        done;
+        STATUS=$$(curl -s http://vault:8200/v1/sys/health);
+        if echo \"$$STATUS\" | grep -q '\"sealed\":false'; then
+          echo 'Vault already unsealed.'; exit 0;
+        fi;
+        echo 'Unsealing Vault...';
+        KEY1=$$(awk '/Unseal Key 1:/{print $$NF}' /keys.txt);
+        KEY2=$$(awk '/Unseal Key 2:/{print $$NF}' /keys.txt);
+        KEY3=$$(awk '/Unseal Key 3:/{print $$NF}' /keys.txt);
+        curl -s -X PUT http://vault:8200/v1/sys/unseal -d \"{\\\"key\\\":\\\"$$KEY1\\\"}\" > /dev/null;
+        curl -s -X PUT http://vault:8200/v1/sys/unseal -d \"{\\\"key\\\":\\\"$$KEY2\\\"}\" > /dev/null;
+        RESULT=$$(curl -s -X PUT http://vault:8200/v1/sys/unseal -d \"{\\\"key\\\":\\\"$$KEY3\\\"}\");
+        if echo \"$$RESULT\" | grep -q '\"sealed\":false'; then
+          echo 'Vault unsealed successfully.'; exit 0;
+        else
+          echo 'ERROR: Vault still sealed after sending keys. Check keys.txt matches the initialized vault.';
+          echo \"Response: $$RESULT\";
+          exit 1;
+        fi
+      "
+    networks:
+      - sunbird-rc
+
+  # ── Identity Service ──────────────────────────────────────────────────────────
+  identity:
+    image: ghcr.io/sunbird-rc/sunbird-rc-identity-service:${RELEASE_VERSION}
+    ports:
+      - '3332:3332'
+    restart: on-failure
+    depends_on:
+      vault:
+        condition: service_healthy
+      vault-unsealer:
+        condition: service_completed_successfully
+      db:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgres://postgres:${POSTGRES_PASSWORD}@db:5432/registry
+      - VAULT_ADDR=${VAULT_ADDR}
+      - VAULT_TOKEN=${VAULT_TOKEN}
+      - VAULT_BASE_URL=${VAULT_BASE_URL}
+      - VAULT_ROOT_PATH=${VAULT_ROOT_PATH}
+      - VAULT_TIMEOUT=${VAULT_TIMEOUT}
+      - VAULT_PROXY=${VAULT_PROXY}
+      - SIGNING_ALGORITHM=${SIGNING_ALGORITHM}
+      - JWKS_URI=${JWKS_URI}
+      - ENABLE_AUTH=false
+      - WEB_DID_BASE_URL=${WEB_DID_BASE_URL}
+    healthcheck:
+      test:
+        ['CMD-SHELL', 'curl -s http://localhost:3332/health -o /dev/null || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sunbird-rc
+
+  # ── Credential Schema Service ─────────────────────────────────────────────────
+  credential-schema:
+    build: ./services/credential-schema
+    ports:
+      - '3333:3333'
+    depends_on:
+      db:
+        condition: service_healthy
+      identity:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgres://postgres:${POSTGRES_PASSWORD}@db:5432/registry
+      - IDENTITY_BASE_URL=${IDENTITY_BASE_URL}
+      - JWKS_URI=${JWKS_URI}
+      - ENABLE_AUTH=false
+    healthcheck:
+      test:
+        ['CMD-SHELL', 'curl -s http://localhost:3333/health -o /dev/null || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sunbird-rc
+
+  # ── Credential Service ────────────────────────────────────────────────────────
+  credential:
+    build: ./services/credentials-service
+    ports:
+      - '3005:3000'
+    depends_on:
+      db:
+        condition: service_healthy
+      identity:
+        condition: service_healthy
+      credential-schema:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgres://postgres:${POSTGRES_PASSWORD}@db:5432/registry
+      - IDENTITY_BASE_URL=${IDENTITY_BASE_URL}
+      - SCHEMA_BASE_URL=${SCHEMA_BASE_URL}
+      - CREDENTIAL_SERVICE_BASE_URL=${CREDENTIAL_SERVICE_BASE_URL}
+      - JWKS_URI=${JWKS_URI}
+      - ENABLE_AUTH=false
+      - QR_TYPE=W3C_VC
+    healthcheck:
+      test:
+        ['CMD-SHELL', 'curl -s http://localhost:3000/health -o /dev/null || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sunbird-rc
+
+  # ── Registry ──────────────────────────────────────────────────────────────────
+  # Uses native PostgreSQL search — no Elasticsearch needed.
+  # expand_reference=true required for the flat Employee schema API responses.
+  registry:
+    image: ghcr.io/sunbird-rc/sunbird-rc-core:${RELEASE_VERSION}
+    restart: on-failure
+    volumes:
+      - ./${SCHEMA_DIR-java/registry/src/main/resources/public/_schemas}:/home/sunbirdrc/config/public/_schemas
+      - ./${VIEW_DIR-java/registry/src/main/resources/views}:/home/sunbirdrc/config/views/
+    environment:
+      - connectionInfo_uri=jdbc:postgresql://db:5432/registry
+      - connectionInfo_username=postgres
+      - connectionInfo_password=${POSTGRES_PASSWORD}
+      # Auth — validates JWTs via Hydra JWKS
+      - oauth2_resource_uri=http://hydra:4444
+      - oauth2_resource_roles_path=ext.role
+      - oauth2_resource_email_path=ext.email
+      - registry_system_base_roles=admin
+      - authentication_enabled=true
+      # Native search (no Elasticsearch)
+      - search_providerName=dev.sunbirdrc.registry.service.NativeSearchService
+      - elastic_search_enabled=false
+      # VC / Signature
+      - signature_enabled=${SIGNATURE_ENABLED-true}
+      - signature_provider=dev.sunbirdrc.registry.service.impl.SignatureV2ServiceImpl
+      - did_enabled=true
+      - did_health_check_url=http://identity:3332/health
+      - did_generate_url=http://identity:3332/did/generate
+      - did_resolve_url=http://identity:3332/did/resolve/{id}
+      - signature_v2_credential_did_method=rcw
+      - signature_v2_issuer_did_method=issuer
+      - signature_v2_schema_author=Registry
+      - signature_v2_schema_author_did_method=author
+      - signature_v2_health_check_url=http://credential:3000/health
+      - signature_v2_issue_url=http://credential:3000/credentials/issue
+      - signature_v2_get_url=http://credential:3000/credentials/{id}
+      - signature_v2_verify_url=http://credential:3000/credentials/{id}/verify
+      - signature_v2_schema_health_check_url=http://credential-schema:3333/health
+      - signature_v2_schema_create_url=http://credential-schema:3333/credential-schema
+      - signature_v2_schema_update_url=http://credential-schema:3333/credential-schema/{id}/{version}
+      - signature_v2_schema_get_by_id_and_version_url=http://credential-schema:3333/credential-schema/{id}/{version}
+      - signature_v2_schema_search_by_tags_url=http://credential-schema:3333/credential-schema?tags={tags}
+      - certificate_enabled=false
+      - template_base_url=http://registry:8081/api/v1/templates/
+      - enable_external_templates=true
+      # Disabled features
+      - encryption_enabled=false
+      - event_enabled=false
+      - claims_enabled=false
+      - idgen_enabled=false
+      - filestorage_enabled=false
+      - notification_enabled=false
+      - async_enabled=false
+      - webhook_enabled=false
+      - WORKFLOW_ENABLED=false
+      # General
+      - identity_provider=dev.sunbirdrc.auth.keycloak.KeycloakProviderImpl
+      - manager_type=DefinitionsManager
+      - expand_reference=true
+      - registry_base_apis_enable=false
+      - logging.level.root=INFO
+    ports:
+      - '8081:8081'
+    depends_on:
+      db:
+        condition: service_healthy
+      credential:
+        condition: service_healthy
+    healthcheck:
+      test:
+        ['CMD-SHELL', 'wget -nv -t1 --spider http://localhost:8081/health || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 10
+    networks:
+      - sunbird-rc
+
+  # ── Kratos ────────────────────────────────────────────────────────────────────
+  kratos-migrate:
+    image: oryd/kratos:v1.0.0
+    environment:
+      DSN: postgres://kratos:${KRATOS_DB_PASSWORD}@db:5432/kratos?sslmode=disable
+    volumes:
+      - ./ory/kratos:/etc/config/kratos
+    command: -c /etc/config/kratos/kratos.yml migrate sql -e --yes
+    restart: on-failure
+    networks:
+      - sunbird-rc
+
+  kratos:
+    image: oryd/kratos:v1.0.0
+    depends_on:
+      kratos-migrate:
+        condition: service_completed_successfully
+      db:
+        condition: service_healthy
+    environment:
+      DSN: postgres://kratos:${KRATOS_DB_PASSWORD}@db:5432/kratos?sslmode=disable
+      LOG_LEVEL: info
+    volumes:
+      - ./ory/kratos:/etc/config/kratos
+    command: serve -c /etc/config/kratos/kratos.yml --dev --watch-courier
+    ports:
+      - "4433:4433"
+      - "4434:4434"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4433/health/alive"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - sunbird-rc
+
+  # ── Hydra ────────────────────────────────────────────────────────────────────
+  hydra-migrate:
+    image: oryd/hydra:v2.2.0
+    environment:
+      DSN: postgres://hydra:${HYDRA_DB_PASSWORD}@db:5432/hydra?sslmode=disable
+    command: migrate sql -e --yes
+    restart: on-failure
+    networks:
+      - sunbird-rc
+
+  hydra:
+    image: oryd/hydra:v2.2.0
+    depends_on:
+      hydra-migrate:
+        condition: service_completed_successfully
+      db:
+        condition: service_healthy
+    environment:
+      DSN: postgres://hydra:${HYDRA_DB_PASSWORD}@db:5432/hydra?sslmode=disable
+      LOG_LEVEL: info
+      SECRETS_SYSTEM: ${HYDRA_SYSTEM_SECRET}
+      SECRETS_COOKIE: ${HYDRA_COOKIE_SECRET}
+      OIDC_SUBJECT_IDENTIFIERS_PAIRWISE_SALT: ${HYDRA_PAIRWISE_SALT}
+    volumes:
+      - ./ory/hydra:/etc/config/hydra
+    command: serve all --config /etc/config/hydra/hydra.yml --dev
+    ports:
+      - "4444:4444"
+      - "4445:4445"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4444/health/alive"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - sunbird-rc
+
+  # ── Hydra Client Bootstrap ────────────────────────────────────────────────────
+  hydra-client-init:
+    image: curlimages/curl:latest
+    depends_on:
+      hydra:
+        condition: service_healthy
+    environment:
+      RC_CLIENT_SECRET: ${RC_CLIENT_SECRET}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "==> Registering rc-admin OAuth2 client..."
+        CLIENT_JSON="{
+          \"client_id\":   \"rc-client\",
+          \"client_name\": \"Sunbird RC Admin\",
+          \"client_secret\": \"${RC_CLIENT_SECRET}\",
+          \"grant_types\":  [\"authorization_code\", \"refresh_token\", \"client_credentials\"],
+          \"response_types\": [\"code\"],
+          \"scope\": \"openid offline_access email profile\",
+          \"redirect_uris\": [
+            \"http://{{host}}:3000/callback\",
+            \"http://{{host}}:3000/\"
+          ],
+          \"post_logout_redirect_uris\": [
+            \"http://{{host}}:3000/login\",
+            \"http://{{host}}:3000/\"
+          ],
+          \"token_endpoint_auth_method\": \"client_secret_post\",
+          \"subject_type\": \"public\"
+        }"
+        STATUS=$$(curl -s -o /tmp/resp.json -w "%{http_code}" \
+          -X POST http://hydra:4445/admin/clients \
+          -H "Content-Type: application/json" \
+          -d "$$CLIENT_JSON")
+        case "$$STATUS" in
+          201) echo "==> Client registered." ;;
+          409)
+            echo "==> Client already exists — updating..."
+            STATUS=$$(curl -s -o /tmp/resp.json -w "%{http_code}" \
+              -X PUT http://hydra:4445/admin/clients/rc-client \
+              -H "Content-Type: application/json" \
+              -d "$$CLIENT_JSON")
+            [ "$$STATUS" = "200" ] && echo "==> Client updated." || { echo "==> Update FAILED (HTTP $$STATUS):"; cat /tmp/resp.json; exit 1; }
+            ;;
+          *)   echo "==> FAILED (HTTP $$STATUS):"; cat /tmp/resp.json; exit 1 ;;
+        esac
+    restart: on-failure
+    networks:
+      - sunbird-rc
+
+networks:
+  sunbird-rc:
+    external: true
