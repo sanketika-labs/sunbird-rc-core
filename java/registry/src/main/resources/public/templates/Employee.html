@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <style>
+    body {
+      font-family: 'Georgia', serif;
+      background: #f5f5f5;
+      margin: 0;
+      padding: 0;
+    }
+    .certificate {
+      width: 900px;
+      margin: 40px auto;
+      background: #fff;
+      border: 12px solid #1a3a6b;
+      border-radius: 8px;
+      padding: 40px 60px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+    .header {
+      text-align: center;
+      border-bottom: 2px solid #1a3a6b;
+      padding-bottom: 20px;
+      margin-bottom: 30px;
+    }
+    .org-name {
+      font-size: 2em;
+      font-weight: bold;
+      color: #1a3a6b;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    .cert-title {
+      font-size: 1.4em;
+      color: #444;
+      margin-top: 8px;
+      letter-spacing: 1px;
+    }
+    .intro {
+      text-align: center;
+      font-size: 1.05em;
+      color: #555;
+      margin-bottom: 30px;
+    }
+    .name-block {
+      text-align: center;
+      margin: 20px 0 30px;
+    }
+    .employee-name {
+      font-size: 2.2em;
+      font-weight: bold;
+      color: #1a3a6b;
+      border-bottom: 2px solid #c8a951;
+      display: inline-block;
+      padding-bottom: 4px;
+    }
+    .details-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px 40px;
+      margin: 30px 0;
+      padding: 20px 30px;
+      background: #f0f4fb;
+      border-radius: 6px;
+    }
+    .detail-item label {
+      display: block;
+      font-size: 0.78em;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 3px;
+    }
+    .detail-item span {
+      font-size: 1.05em;
+      color: #222;
+      font-weight: 600;
+    }
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid #ddd;
+    }
+    .qr-section {
+      text-align: center;
+    }
+    .qr-section img {
+      width: 110px;
+      height: 110px;
+    }
+    .qr-section p {
+      font-size: 0.75em;
+      color: #888;
+      margin-top: 6px;
+    }
+    .signature-section {
+      text-align: center;
+    }
+    .signature-line {
+      border-top: 1px solid #333;
+      width: 200px;
+      margin: 0 auto;
+      padding-top: 8px;
+      font-size: 0.9em;
+      color: #555;
+    }
+    .issued-date {
+      text-align: center;
+      font-size: 0.85em;
+      color: #777;
+      margin-top: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div class="certificate">
+    <div class="header">
+      <div class="org-name">Sunbird RC</div>
+      <div class="cert-title">Employee Certificate</div>
+    </div>
+
+    <div class="intro">
+      This is to certify that
+    </div>
+
+    <div class="name-block">
+      <div class="employee-name">{{credentialSubject.name}}</div>
+    </div>
+
+    <div class="intro">
+      is a verified employee with the following details:
+    </div>
+
+    <div class="details-grid">
+      <div class="detail-item">
+        <label>Personal ID</label>
+        <span>{{credentialSubject.personalIdentification}}</span>
+      </div>
+      <div class="detail-item">
+        <label>Email</label>
+        <span>{{credentialSubject.email}}</span>
+      </div>
+      <div class="detail-item">
+        <label>Position</label>
+        <span>{{credentialSubject.position}}</span>
+      </div>
+      <div class="detail-item">
+        <label>Department</label>
+        <span>{{credentialSubject.department}}</span>
+      </div>
+      <div class="detail-item">
+        <label>Institution</label>
+        <span>{{credentialSubject.institution}}</span>
+      </div>
+      <div class="detail-item">
+        <label>Date of Hire</label>
+        <span>{{credentialSubject.dateOfHire}}</span>
+      </div>
+      <div class="detail-item">
+        <label>Status</label>
+        <span>{{credentialSubject.status}}</span>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="qr-section">
+        <img src="{{qrCode}}" alt="Verification QR Code" />
+        <p>Scan to verify</p>
+      </div>
+      <div class="signature-section">
+        <div class="signature-line">Authorized Signatory</div>
+        <div class="issued-date">Issued on: {{issuanceDate}}</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,59 @@
+serve:
+  cookies:
+    same_site_mode: Lax
+  public:
+    cors:
+      enabled: true
+      allowed_origins:
+        - http://localhost:5173   # rc-admin (Vite dev server)
+        - http://localhost:3000   # other app origins
+        - http://localhost:5555   # login-bridge (headless flows)
+  admin:
+    cors:
+      enabled: true
+      allowed_origins:
+        - http://localhost:5173   # rc-admin (Vite dev server)
+        - http://localhost:3000   # rc-admin (Docker / production)
+        - http://localhost:5555   # login-bridge
+
+urls:
+  self:
+    issuer: http://hydra:4444           # iss claim in JWTs; registry validates via Docker DNS (hydra:4444)
+
+  login:   http://localhost:3000/login   # rc-admin Login.tsx  — handles Hydra login_challenge
+  consent: http://localhost:3000/consent # rc-admin Consent.tsx — auto-accepts consent_challenge
+  logout:  http://localhost:3000/logout
+
+# ── DSN (injected via SECRETS_SYSTEM / SECRETS_COOKIE env vars in docker-compose) ──
+dsn: ${DSN}
+
+# ── Token Strategy ────────────────────────────────────────────────────────────
+strategies:
+  access_token: jwt     # signed JWTs — no introspection call needed by consumers
+  scope: wildcard
+
+# ── OAuth2 ────────────────────────────────────────────────────────────────────
+oauth2:
+  expose_internal_errors: true
+  mirror_top_level_claims: true  # copies id_token claims into access_token payload
+
+# ── OIDC ──────────────────────────────────────────────────────────────────────
+oidc:
+  subject_identifiers:
+    supported_types:
+      - public
+    pairwise:
+      salt: ${OIDC_SUBJECT_IDENTIFIERS_PAIRWISE_SALT}
+
+# ── Token TTLs ────────────────────────────────────────────────────────────────
+ttl:
+  access_token: 1h
+  refresh_token: 720h   # 30 days (offline_access scope)
+  id_token: 1h
+  auth_code: 10m
+  login_consent_request: 30m
+
+# ── Logging ───────────────────────────────────────────────────────────────────
+log:
+  level: debug
+  format: text
